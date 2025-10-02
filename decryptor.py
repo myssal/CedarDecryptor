@@ -59,8 +59,9 @@ class Decryptor:
 
         for root, _, files in os.walk(cache_folder):
             for file in files:
-                cache_files.append(os.path.join(root, file))
-        
+                if file.endswith("__data"):
+                    cache_files.append(os.path.join(root, file))
+
         return cache_files
 
     def decrypt_file(self, input_path: str, output_path: str):
@@ -84,11 +85,13 @@ class Decryptor:
 
         restored_count = 0
         for cache_file in cache_files:
-            filename = os.path.basename(cache_file)
+            full_path = cache_file
+            hash_name = os.path.basename(os.path.dirname(cache_file))
+
             for original_name, hash_value in manifest_map.items():
-                if filename.lower().startswith(hash_value.lower()):
+                if hash_name.lower().startswith(hash_value.lower()):
                     output_path = os.path.join(self.output_folder, original_name)
-                    self.decrypt_file(os.path.join(cache_file, "__data"), output_path)
+                    self.decrypt_file(cache_file, output_path)
                     restored_count += 1
                     break
 
