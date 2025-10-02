@@ -1,0 +1,2 @@
+pycryptodome==3.23.0
+typer==0.19.1

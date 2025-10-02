@@ -1,9 +1,8 @@
-import sys
 from pathlib import Path
 import typer
 from decryptor import Decryptor
 
-app = typer.Typer(help="Decrypt all packages in the given folder")
+app = typer.Typer(help="Codename:Cedar/Cedrus game asset bundles decryptor. Only support full yoo decrypt for now.")
 
 @app.command()
 def main(input_folder: str = typer.Argument(..., help="Path to yoo folder")):
