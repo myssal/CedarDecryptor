@@ -16,20 +16,32 @@ class Decryptor:
         """
         Reads a .bytes manifest file and returns a dict mapping: full_filename -> hash
         """
-        print(f"Build manifest map for {package_name}")
+        print(f"Build manifest map from {manifest_file}")
+
         package_name_lower = package_name.lower()
+        if "defaultpackage" in package_name_lower:
+            extension = b"bundle"
+        elif "rawpackage" in package_name_lower:
+            extension = b"rawfile"
+        else:
+            extension = b"bundle"
 
         with open(manifest_file, "rb") as f:
             data = f.read()
 
         package_name_bytes = package_name_lower.encode('utf-8')
-        regex_pattern = re.compile(package_name_bytes + b"(.*?)bundle.{6}([0-9a-f]{32})", re.DOTALL)
+
+        # package_name + any bytes + extension + optional 6 bytes + 32-character hash
+        regex_pattern = re.compile(package_name_bytes + b"(.*?)" + extension + b".{6}([0-9a-f]{32})", re.DOTALL)
+
         matches = regex_pattern.findall(data)
 
         mapping = {}
         for name_bytes, hash_bytes in matches:
-            full_name_bytes = package_name_lower.encode('utf-8') + name_bytes + b'bundle'
-            mapping[full_name_bytes.decode('utf-8', errors='ignore')] = hash_bytes.decode('ascii')
+            full_name_bytes = package_name_bytes + name_bytes + extension
+            full_name = full_name_bytes.decode('utf-8', errors='ignore')
+            hash_str = hash_bytes.decode('ascii')
+            mapping[full_name] = hash_str
 
         return mapping
 
@@ -59,7 +71,7 @@ class Decryptor:
 
         for root, _, files in os.walk(cache_folder):
             for file in files:
-                if file.endswith("__data"):
+                if "__data" in file:
                     cache_files.append(os.path.join(root, file))
 
         return cache_files
@@ -85,12 +97,11 @@ class Decryptor:
 
         restored_count = 0
         for cache_file in cache_files:
-            full_path = cache_file
             hash_name = os.path.basename(os.path.dirname(cache_file))
 
             for original_name, hash_value in manifest_map.items():
                 if hash_name.lower().startswith(hash_value.lower()):
-                    output_path = os.path.join(self.output_folder, original_name)
+                    output_path = os.path.join(self.output_folder, package_name, original_name)
                     self.decrypt_file(cache_file, output_path)
                     restored_count += 1
                     break
@@ -99,7 +110,7 @@ class Decryptor:
 
     def process_packages(self):
         """
-        Process DefaultPackage and RawPackage
+        Process DefaultPackage and RawPackage folders
         """
         if not os.path.exists(self.input_folder):
             print(f"Input folder does not exist: {self.input_folder}")
